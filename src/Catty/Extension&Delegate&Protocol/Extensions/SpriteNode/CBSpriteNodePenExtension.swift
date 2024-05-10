@@ -23,29 +23,57 @@
 extension CBSpriteNode {
 
     @objc func drawPenLine() {
-
-        if penConfiguration.previousPositions.last != self.position && penConfiguration.penDown {
-            penConfiguration.previousPositions.append(self.position)
+        for i in 0..<self.penConfiguration.previousPositionLines.count
+        {
+            drawLineFromConfiguration(with: self.penConfiguration.previousPositionLines[i]!, mode: false)
         }
-
-        let positionCount = penConfiguration.previousPositions.count
+        if self.penConfiguration.previousPositions.last != self.position && penConfiguration.penDown {
+            self.penConfiguration.previousPositions.append(self.position)
+        }
+        drawLineFromConfiguration(with: self.penConfiguration.previousPositions, mode: false)
+    }
+    
+    @objc func drawPlotLine() {
+        for i in 0..<self.penConfiguration.previousCutPositionLines.count
+        {
+            drawLineFromConfiguration(with: self.penConfiguration.previousCutPositionLines[i]!, mode: true)
+        }
+        if self.penConfiguration.previousCutPositions.last != self.position && penConfiguration.cut {
+            self.penConfiguration.previousCutPositions.append(self.position)
+        }
+        drawLineFromConfiguration(with: self.penConfiguration.previousCutPositions, mode: true)
+    }
+    
+    private func drawLineFromConfiguration(with positions:SynchronizedArray<CGPoint>, mode dashed:Bool){
+        
+        let positionCount = positions.count
         if positionCount > 1 {
-            for (index, point) in penConfiguration.previousPositions.enumerated() where index > 0 {
-                guard let lineFrom = penConfiguration.previousPositions[index - 1] else {
+            for (index, point) in positions.enumerated() where index > 0 {
+                guard let lineFrom = positions[index - 1] else {
                     fatalError("This should never happen")
                 }
                 let lineTo = point
-
-                self.addLine(from: lineFrom, to: lineTo, withColor: penConfiguration.color, withSize: penConfiguration.size)
+                if(dashed){
+                    self.addDashedLine(from: lineFrom, to: lineTo, withColor: penConfiguration.color, withSize: penConfiguration.size)
+                } else {
+                    self.addLine(from: lineFrom, to: lineTo, withColor: penConfiguration.color, withSize: penConfiguration.size)
+                }
             }
-
-            penConfiguration.previousPositions.removeSubrange(0..<positionCount - 1)
+            positions.removeSubrange(0..<positionCount - 1)
         }
-
     }
 
     private func addLine(from startPoint: CGPoint, to endPoint: CGPoint, withColor color: UIColor, withSize size: CGFloat) {
         let line = LineShapeNode(pathStartPoint: startPoint, pathEndPoint: endPoint)
+        line.name = SpriteKitDefines.penShapeNodeName
+        line.strokeColor = color
+        line.lineWidth = size
+        line.zPosition = SpriteKitDefines.defaultPenZPosition
+
+        self.scene?.addChild(line)
+    }
+    private func addDashedLine(from startPoint: CGPoint, to endPoint: CGPoint, withColor color: UIColor, withSize size: CGFloat) {
+        let line = DashedLineShapeNode(pathStartPoint: startPoint, pathEndPoint: endPoint)
         line.name = SpriteKitDefines.penShapeNodeName
         line.strokeColor = color
         line.lineWidth = size
